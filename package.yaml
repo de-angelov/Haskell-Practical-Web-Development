@@ -1,9 +1,9 @@
 name: hauth
 version: 0.1.0.0
 description: Please see the README on GitHub at <https://github.com/githubuser/hauth#readme>
-author: Author name here
-maintainer: example@example.com
-copyright: 2020 Author name here
+author: Denis Angelov
+maintainer: 
+copyright: 2020 Denis Angelov
 license: BSD3
 github: githubuser/hauth
 extra-source-files:
