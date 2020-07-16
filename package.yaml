@@ -9,8 +9,23 @@ github: githubuser/hauth
 extra-source-files:
 - README.md
 - ChangeLog.md
+
 dependencies:
 - base >=4.7 && <5
+- classy-prelude
+- time
+- time-lens
+- pcre-heavy
+- safe-exception
+- aeson
+- template-haskell
+
+default-extensions:
+- NoImplicitPrelude
+- OverloadedStrings
+- QuasiQuotes
+- TemplateHaskell
+
 library:
   source-dirs: src
   exposed-modules:
