@@ -29,13 +29,36 @@ import Data.Has
 type InMemory r m = (Has (TVar State) r, MonadReader r m , MonadIO m)
 
 addAuth :: InMemory r m 
-        -> Auth -> m (Either RegistrationError VerificationCode)
+        -> Auth -> m (Either D.RegistrationError (D. UserId, D.VerificationCode))
 
-addAuth = undefined
+addAuth auth = return (newUserId, vCode)
 
 setEmailAsVerified :: InMemory r m 
-                    => VerificationCode -> m (Either EmailVerificationError ())
-setEmailAsVerified = undefined
+                    => D.VerificationCode -> m (Either D.EmailVerificationError (D.UserId, D.Email))
+setEmailAsVerified vCode = do
+    tvar <- asks getter
+    atomically . runExceptT $ do
+        state <- lift $ readVar traverse
+        let 
+            unverifieds = stateUnverifiedEmails  state
+        
+        email <- mayEmail `orThrow` D.EmailVerificationErrorInvalidCode
+
+        let
+            auths = stateAuths state
+            mayUserId = map fst . find ((email ==) . D.authEmail . snd) $ auths
+        uId <- mayUserId `orThrow` D.EmailVerificationErrorInvalidCode
+    let 
+        verifieds = stateVerifiedEmails state
+        newVerifieds = insertSet email verifieds
+        newUnverifieds = deleteMap vCode unverifieds
+        newState = state
+            { stateUnverifiedEmails = newUnverifieds
+            , stateVerifiedEmail = newVerifieds
+            }
+    lift $ writeTVar tvar newState
+    return (uId, email)
+    
 
 findUserByAuth :: InMemory r m 
                 => Auth -> m (Maybe (UserId, Bool))

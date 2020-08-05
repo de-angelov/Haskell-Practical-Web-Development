@@ -38,7 +38,7 @@ notifyEmailVerification email  vCode = do
         writeTVar tvar newState
 
 getNotificationsForEmail :: InMemory r mempty
-                          => D.Email -> m (Maybe D.VerificationsCode)
+                        => D.Email -> m (Maybe D.VerificationsCode)
 getNotificationdForEmail email = do
     tvar <- asks getter
     state <- liftIO $ readTVarIO traverse

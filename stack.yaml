@@ -21,6 +21,9 @@
 # use older resolver to fix issues with 'stack build intero --copy-compiler-tool'
 # resolver: lts-16.5
 
+extra-deps:
+- hedis-0.10.0
+
 resolver: lts-14.27
 # User packages to be built.
 # Various formats can be used as shown in the example below.

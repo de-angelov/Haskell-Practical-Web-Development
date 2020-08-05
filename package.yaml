@@ -22,6 +22,11 @@ dependencies:
 - mtl
 - data-has
 - string-random-0.1.0.0
+- katip
+- resource-pool
+- postgresql-simple
+- hedis
+- amqp
 
 default-extensions:
 - NoImplicitPrelude
@@ -31,6 +36,7 @@ default-extensions:
 - ConstraintKinds
 - FlexibleContexts
 - GeneralizedNewtypeDeriving
+- TemplateHaskell
 
 library:
   source-dirs: src

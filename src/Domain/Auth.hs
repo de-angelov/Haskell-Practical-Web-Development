@@ -31,14 +31,29 @@ class (Monad m) => AuthRepo m where
 register 	:: (AuthRepo m,  EmailVerificationNotif m)
 					=> Auth -> m (Euther RegistrationError())
 register auth = runExceptT $ do
-	vCode <- ExceptT $ addAuth  auth
+    (uId, vCode) <- ExceptT $ addAuth auth
 	let email = authEmail auth
 	lift $ notifyEmailVerification email vCode
+    withUserIdContext uId $
+        $(logTM) InfoS $ ls (rawEmail email) <> " is registered successfully"
 
-verifyEmail :: AuthRepo m
+verifyEmail :: (KatipContext m, AuthRepo m)
             => VerificationCode -> m (Either EmailVerificationError ())
             verifyEmail = setEmailAsVerified
+verifyEmail vCode = runExceptT $ do
+    (uId, email) <- ExceptT $ setEmailAsVerified vCode
+    withUserIdContext uId $
+        $(logTM) InfoS $ ls (rawEmail  email) <> " is verified successfully"
+    return()
 
+login :: (LatipContext m, AuthRepo m, SessionRepo m)
+    => Auth ->  m (Either LoginError SessionId)
+login auth = runExveptT $ do
+    result <- lift $ findUserByAuth auth
+    case result of
+        Nothing -> throwError LoginErrorInvalidAuth
+        Just (_, False) -> throwError LoginErrorInvalidAuth
+        Just 
 instance AuthRepo IO where
 	addAuth (Auth email pass) = do
 		putStrLn $ "adding auth: " <> rawEmail email
@@ -66,7 +81,7 @@ class Monad M => SessionRepo m where
 type VerificationCode = Text
 
 class Monad m => AuthRepo m where
-    addAuth :: Auth -> m (Either RegistrationError VerificationCode)
+    addAuth :: Auth -> m (Either RegistrationError ( UserId, VerificationCode))
 
 class Monad m => EmailVerificationNotif m where
     notifyEmailVerification :: Email -> VerificationCode -> m ()
@@ -89,6 +104,7 @@ instance EmailVerificationNotif IO where
 
 
 class Monad m => AuthRepo m where
+    addAuth :: Auth -> m (Either ReistrationError (UserId, VerificationCode))
     setEmailAsVerified :: VerificationCode -> , (Either 
     EmailVerificationError ())
 
@@ -117,7 +133,17 @@ class Monad m => SessionRepo m where
     newSession :: UserId -> m SessionId
 
 login :: (AuthRepo m, SessionRepo m)
-    =>  Auth -> m (Either LoginError SessionId)
+        => Auth -> m (Either LoginError SessionId)
+login auth = runExceptT $ do
+    result <- lift $ findUserByAuth  auth
+    case result of 
+        Nothing -> throwError LoginErrorInvalidAuth
+        Just (_, False) -> throwError LoginErrorEmailNotVerified
+        Just (uId, _) -> withUserIdContext uId . lift $ do
+            sId <- newSession uId
+            $(logTM) InfoS $ ls (rawEmail $ authEmail auth) <> " logged in successfully"
+            return sId
+
 
 class Monad m => SessionRepo m where
     findUserIdBySessionId :: SessionId -> m (Maybe UserId)
@@ -125,15 +151,8 @@ class Monad m => SessionRepo m where
 resolveSessionId :: SessionRepo m => SessionId -> m (maybe UserId)
 resolveSessionId = findUserIdBySessionId
 
-login :: (AuthRepo m, SessionRepo m)
-        => Auth -> m (Either LoginError SessionId)
-login auth = runExceptT $ do
-    result <- lift $ findUserByAuth  auth
 
-case result of 
-    Nothing -> throwError LoginErrorInvalidAuth
-    Just (_, False) -> throwError LoginErrorEmailNotVerified
-    Just (uId, _) -> lift $ newSession uId
+
 
 class Monad m => AuthRepo m where
     findEmailFromUserId :: UserId -> m (Maybe Email)
