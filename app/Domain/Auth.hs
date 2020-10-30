@@ -1,18 +1,30 @@
 module Domain.Auth (
+  -- Types
   Auth(..),
   Email,
   mkEmail,
+  rawEmail,
   Password,
   mkPassword,
+  rawPassword,
   UserId,
   VerificationCode,
   SessionId,
   RegistrationError(..),
   EmailVerificationError(..),
   LoginError(..),
+
+  -- Ports
   AuthRepo(..),
   EmailVerificationNotif(..),
-  SessionRepo(..)
+  SessionRepo(..),
+
+  -- Use Cases
+  register,
+  verifyEmail,
+  login,
+  resolveSessionId,
+  getUser
 ) where
 
 import ClassyPrelude
@@ -66,12 +78,10 @@ type VerificationCode = Text
 class Monad m  => AuthRepo m where
   addAuth :: Auth -> m (Either RegistrationError VerificationCode)
   setEmailAsVerified :: VerificationCode -> m (Either EmailVerificationError ())
-  findUserByAuth ::  Auth -> Maybe (UserId, Bool)
+  findUserByAuth ::  Auth -> m ( Maybe  (UserId, Bool) )
   findEmailFromUserId :: UserId -> m (Maybe Email)
--- class Monad m => AuthRepo m where
---   addAuth :: Auth -> m (Either RegistrationError VerificationCode)
 
-class Monad m => EmailVerificationNotif where
+class Monad m => EmailVerificationNotif m where
   notifyEmailVerification :: Email -> VerificationCode -> m ()
 
 register :: (AuthRepo m, EmailVerificationNotif m)
@@ -88,7 +98,7 @@ instance AuthRepo IO where
 
 instance EmailVerificationNotif IO where
   notifyEmailVerification email vcode =
-    putStrnLn $ "Notify : " <> rawEmail email <> " - " <> vcode
+    putStrLn $ "Notify : " <> rawEmail email <> " - " <> vcode
 
 type SessionId = Text
 
@@ -101,7 +111,7 @@ data EmailVerificationError
   deriving (Show, Eq)
 
 verifyEmail :: AuthRepo m 
-  => VerificationCode -> m (Either EMailVerificationError ())
+  => VerificationCode -> m (Either EmailVerificationError ())
 verifyEmail = setEmailAsVerified
 
 data LoginError
@@ -109,19 +119,16 @@ data LoginError
   | LoginErrorEmailNotVerified
   deriving (Show, Eq)
 
-class Monad m => AuthRepo m where
-  findUserByAuth :: Auth -> m (Maybe (UserId, Bool))
+
 
 class Monad m => SessionRepo m where
   newSession :: UserId -> m SessionId
   findUserIdBySessionId :: SessionId -> m (Maybe UserId)
 
-login :: (AuthRepo m, SessionRepo m)
-  => Auth -> m (Either LoginError SessionId)
-login = undefined
+
 
 resolveSessionId :: SessionRepo m => SessionId -> m (Maybe UserId)
-reolveSessionId = findUserBySessionId
+resolveSessionId = findUserIdBySessionId
 
 login :: (AuthRepo m, SessionRepo m)
   => Auth -> m (Either LoginError SessionId)
@@ -134,20 +141,3 @@ login auth = runExceptT $ do
 
 getUser :: AuthRepo m => UserId -> m (Maybe Email)
 getUser = findEmailFromUserId
-
-
-
--- login :: (AuthRepo m, SessionRepo m)
---   => Auth -> m (Either LoginError SessionId)
--- login auth = runExceptT $ do 
---   result <- lift $ findUserByAuth auth
---   case result of
---     Nothing -> throwError LoginErrorInvalidAuth
---     Just (_, False) -> throwError LoginErrorEmailNotVerified
---     Just (uId, _) -> lift $ newSession uId
-
--- resolveSessionId :: (SessionRepo m) => SessionId -> m (Maybe UserId)
--- resolveSessionId = findUserIdBySessionId
-
--- getUser :: (AuthRepo m) => UserId -> m (Maybe Email)
--- getUser = findEmailFromUserId
