@@ -73,6 +73,8 @@ data Auth = Auth
 
 type UserId = Int
 
+type SessionId = Text
+
 type VerificationCode = Text
 
 class Monad m  => AuthRepo m where
@@ -100,7 +102,7 @@ instance EmailVerificationNotif IO where
   notifyEmailVerification email vcode =
     putStrLn $ "Notify : " <> rawEmail email <> " - " <> vcode
 
-type SessionId = Text
+
 
 data RegistrationError 
   = RegistrationErrorEmailTaken
@@ -119,13 +121,9 @@ data LoginError
   | LoginErrorEmailNotVerified
   deriving (Show, Eq)
 
-
-
 class Monad m => SessionRepo m where
   newSession :: UserId -> m SessionId
   findUserIdBySessionId :: SessionId -> m (Maybe UserId)
-
-
 
 resolveSessionId :: SessionRepo m => SessionId -> m (Maybe UserId)
 resolveSessionId = findUserIdBySessionId

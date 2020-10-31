@@ -18,11 +18,16 @@ dependencies:
 - aeson
 - template-haskell
 - mtl
+- data-has
+- string-random
 default-extensions:
-  - NoImplicitPrelude
-  - OverloadedStrings
-  - QuasiQuotes
-  - TemplateHaskell
+- NoImplicitPrelude
+- OverloadedStrings
+- QuasiQuotes
+- TemplateHaskell
+- ConstraintKinds
+- FlexibleContexts
+- GeneralizedNewtypeDeriving
 
 library:
   source-dirs: src
