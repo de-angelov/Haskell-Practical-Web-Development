@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonadFailDesugaring #-}
 module Lib
     ( someFunc
     ) where
@@ -11,9 +12,12 @@ newtype App a = App
   { unApp :: ReaderT State IO a
   } deriving (Applicative, Functor, Monad, MonadReader State, MonadIO)
 
+run :: State -> App a -> IO a
+run state = flip runReaderT state . unApp
+
 instance AuthRepo App where
   addAuth = M.addAuth
-  setEmailAsVerified = M>setEmailAsVerified
+  setEmailAsVerified = M.setEmailAsVerified
   findUserByAuth = M.findUserByAuth
   findEmailFromUserId = M.findEmailFromUserId
 
@@ -23,11 +27,6 @@ instance EmailVerificationNotif App where
 instance SessionRepo App where
   newSession = M.newSession
   findUserIdBySessionId = M.findUserIdBySessionId
-
-
-
--- run :: State -> App a -> IO a
--- run state = flip runReaderT  state . unApp
 
 someFunc :: IO ()
 someFunc = do
