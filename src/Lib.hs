@@ -1,19 +1,24 @@
 {-# LANGUAGE NoMonadFailDesugaring #-}
 module Lib
-    ( someFunc
-    ) where
+  ( someFunc
+  ) where
 
 import ClassyPrelude
 import qualified Adapter.InMemory.Auth as M
 import Domain.Auth
+import Katip
 
 type State = TVar M.State
 newtype App a = App
-  { unApp :: ReaderT State IO a
-  } deriving (Applicative, Functor, Monad, MonadReader State, MonadIO)
+  { unApp :: ReaderT State (KatipContextT IO) a
+  } deriving ( Applicative, Functor, Monad, MonadReader State, MonadIO
+             , KatipContext, Katip)
 
-run :: State -> App a -> IO a
-run state = flip runReaderT state . unApp
+run :: LogEnv -> State -> App a -> IO a
+run le state 
+  = runKatipContextT le () mempty
+  . flip runReaderT state 
+  . unApp
 
 instance AuthRepo App where
   addAuth = M.addAuth
@@ -27,19 +32,26 @@ instance EmailVerificationNotif App where
 instance SessionRepo App where
   newSession = M.newSession
   findUserIdBySessionId = M.findUserIdBySessionId
+  
+withKatip :: (LogEnv -> IO a) -> IO a
+withKatip app =
+  bracket createLogEnv closeScribes app
+  where
+    createLogEnv = do
+      logEnv <- initLogEnv "HAuth" "prod"
+      stdoutScribe <- mkHandleScribe ColorIfTerminal stdout InfoS V2
+      registerScribe "stdout" stdoutScribe defaultScribeSettings logEnv
 
 someFunc :: IO ()
-someFunc = do
+someFunc = withKatip $ \le -> do
   state <- newTVarIO M.initialState
-  run state action
+  run le state action
 
 action :: App ()
 action = do
-  let
-    email = either undefined id $ mkEmail "test@test.com"
-    passw = either undefined id $ mkPassword "1234ABCDefgh"
-    auth = Auth email passw
-    
+  let email = either undefined id $ mkEmail "ecky@test.com"
+      passw = either undefined id $ mkPassword "1234ABCDefgh"
+      auth = Auth email passw
   register auth
   Just vCode <- M.getNotificationsForEmail email
   verifyEmail vCode
